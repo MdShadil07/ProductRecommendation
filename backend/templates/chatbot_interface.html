@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot - Product Intelligence</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate-50: Consistent lighter background */
+            line-height: 1.6;
+            color: #334155; /* Slate-700 for default text */
+            margin: 0; /* Ensure no default body margin */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Make body take full viewport height */
+        }
+        /* Consistent Header Background */
+        .header-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Indigo to Violet gradient */
+        }
+
+        /* Chat Container Styling */
+        .chat-container {
+            max-width: 800px;
+            width: 95%; /* Adjust width for better responsiveness */
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            background-color: #ffffff;
+            border-radius: 1.25rem; /* More rounded corners */
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); /* Stronger, professional shadow */
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1; /* Allows it to grow and fill space */
+            min-height: 70vh;
+            overflow: hidden; /* Ensures rounded corners are visible */
+        }
+        .messages-area {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            /* max-height: calc(70vh - 120px); -- This might be too restrictive. Let flex-grow handle it. */
+            scroll-behavior: smooth;
+            display: flex; /* Use flexbox for messages */
+            flex-direction: column; /* Stack messages vertically */
+        }
+        .message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.5; /* Improved readability */
+        }
+        .user-message {
+            background-color: #e0e7ff; /* Indigo-100 */
+            color: #312e81; /* Indigo-800 for contrast */
+            margin-left: auto;
+            border-bottom-right-radius: 0.25rem; /* Slightly different corner */
+        }
+        .bot-message {
+            background-color: #f1f5f9; /* Slate-100 */
+            color: #1e293b; /* Slate-900 for contrast */
+            margin-right: auto;
+            border-bottom-left-radius: 0.25rem; /* Slightly different corner */
+        }
+        .input-area {
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0; /* Slate-200 */
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background-color: #ffffff; /* Ensure input area has white background */
+        }
+        .lucide-icon-md {
+            width: 1.5rem;
+            height: 1.5rem;
+            stroke-width: 2;
+        }
+        .lucide-icon-sm {
+            width: 1.25rem;
+            height: 1.25rem;
+            stroke-width: 2;
+        }
+        .lucide-icon-lg {
+            width: 3rem;
+            height: 3rem;
+            stroke-width: 2;
+        }
+
+        /* btn-action (Send Button) - Modified to match header gradient */
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; /* Center icon */
+            padding: 0.75rem 1rem; /* Adjust padding for button with icon */
+            border-width: 0px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); /* Lighter shadow for send button */
+            color: #ffffff;
+            background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Indigo to Violet gradient */
+            transition: all 0.3s ease-in-out;
+        }
+        .btn-action:hover {
+            background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); /* Darker shade on hover */
+            transform: translateY(-2px); /* Subtle lift */
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15); /* More prominent shadow on hover */
+        }
+        .btn-action:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #a78bfa; /* Ring focus effect */
+        }
+
+        /* input-field */
+        .input-field {
+            display: block;
+            flex-grow: 1;
+            padding: 0.625rem 1rem;
+            border-width: 1px;
+            border-color: #cbd5e1; /* Slate-300 */
+            border-radius: 0.625rem; /* Slightly more rounded */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            font-size: 1rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #6366f1; /* Indigo-500 */
+            box-shadow: 0 0 0 1px #6366f1, 0 0 0 3px rgba(99, 102, 241, 0.2); /* Softer ring */
+        }
+        .input-field:hover {
+            border-color: #94a3b8; /* Slate-400 on hover */
+        }
+
+        /* Product Card Styling (for bot recommendations) */
+        .product-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease-in-out;
+        }
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .product-card-image {
+            width: 80px; /* Fixed width for consistency */
+            height: 80px; /* Fixed height for consistency */
+            border-radius: 0.5rem;
+            object-fit: cover; /* Ensures image covers the area without distortion */
+            background-color: #cbd5e1; /* Placeholder background */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .product-card-image img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 0.5rem; /* Inherit border-radius */
+        }
+        .product-card-details {
+            flex-grow: 1;
+        }
+        .product-card-details h4 {
+            font-weight: 600;
+            color: #1e293b; /* Slate-900 */
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+        .product-card-details p {
+            font-size: 0.9rem;
+            color: #64748b; /* Slate-500 */
+            margin-bottom: 0.25rem;
+        }
+        .product-card-price {
+            font-weight: 700;
+            color: #0d9488; /* Teal-600 for price */
+            font-size: 1.1rem;
+        }
+        .product-card-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            background-color: #22c55e; /* Green-500 for action */
+            color: white;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .product-card-button:hover {
+            background-color: #16a34a; /* Green-600 */
+        }
+        /* Animation for thinking state */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body>
+    <header class="header-bg text-white shadow-lg p-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-extrabold flex items-center gap-3">
+                <span data-lucide="message-square-text" class="lucide-icon-md"></span>
+                AI Chatbot - Product Intelligence
+            </h1>
+            <nav>
+                <a href="#" class="text-white hover:text-blue-200 px-4 py-2 rounded-lg transition duration-200">Dashboard</a>
+                <a href="#" class="text-white hover:text-blue-200 px-4 py-2 rounded-lg transition duration-200">Visualizations</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="chat-container">
+        <div class="messages-area" id="messagesArea">
+            <div class="message-bubble bot-message">Hello! How can I help you with product information or recommendations today?</div>
+            <div class="message-bubble bot-message" style="width: 90%;">
+                <p class="mb-2">Based on your interest in "gaming laptops," here are some top recommendations:</p>
+                <div class="flex flex-col gap-3">
+                    <div class="product-card">
+                        <div class="product-card-image">
+                            <img src="https://via.placeholder.com/100?text=Laptop" alt="Gaming Laptop Model X">
+                        </div>
+                        <div class="product-card-details">
+                            <h4>Gaming Laptop Model X</h4>
+                            <p>High-performance gaming laptop with RTX 4080.</p>
+                            <span class="product-card-price">$1899.99</span>
+                            <a href="#" class="product-card-button mt-2">
+                                <span data-lucide="shopping-cart" class="lucide-icon-sm"></span> View Product
+                            </a>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-card-image">
+                            <img src="https://via.placeholder.com/100?text=Laptop" alt="Gaming Laptop Pro">
+                        </div>
+                        <div class="product-card-details">
+                            <h4>Gaming Laptop Pro 15</h4>
+                            <p>Sleek design, powerful CPU, and vibrant display.</p>
+                            <span class="product-card-price">$1599.00</span>
+                            <a href="#" class="product-card-button mt-2">
+                                <span data-lucide="shopping-cart" class="lucide-icon-sm"></span> View Product
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">Would you like more details on any of these, or perhaps different options?</p>
+            </div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="chatInput" placeholder="Ask about products, features, or recommendations..." class="input-field">
+            <button id="sendButton" class="btn-action">
+                <span data-lucide="send" class="lucide-icon-md"></span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const messagesArea = document.getElementById('messagesArea');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+
+        async function sendMessage() {
+            const userQuery = chatInput.value.trim();
+            if (userQuery === '') return;
+
+            // Add user message to chat area
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('message-bubble', 'user-message');
+            userMessageDiv.textContent = userQuery;
+            messagesArea.appendChild(userMessageDiv);
+
+            chatInput.value = ''; // Clear input
+
+            // Add a "typing" indicator or placeholder for bot response
+            const botThinkingDiv = document.createElement('div');
+            botThinkingDiv.classList.add('message-bubble', 'bot-message');
+            botThinkingDiv.innerHTML = '<span class="animate-pulse">...thinking...</span>';
+            messagesArea.appendChild(botThinkingDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight; // Scroll to bottom
+
+            try {
+                // In a real application, you'd send userQuery to your backend here
+                // const response = await fetch('/chatbot', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ query: userQuery })
+                // });
+                // if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
+                // const result = await response.json();
+                // botThinkingDiv.textContent = result.response; // Update with actual bot response
+
+                // --- SIMULATED BOT RESPONSE FOR DEMONSTRATION ---
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+
+                let botResponseText = 'I am an AI chatbot. How can I help you today?';
+                let productsToRecommend = [];
+
+                if (userQuery.toLowerCase().includes('laptop') || userQuery.toLowerCase().includes('pc')) {
+                    botResponseText = 'Certainly! Looking for a laptop? Here are a few popular options:';
+                    productsToRecommend = [
+                        { name: 'Ultrabook Pro 14', desc: 'Sleek & powerful for productivity.', price: '$1199.00', img: 'https://via.placeholder.com/100?text=Laptop1' },
+                        { name: 'Gaming Beast RGB', desc: 'Ultimate performance for gamers.', price: '$2299.99', img: 'https://via.placeholder.com/100?text=Laptop2' },
+                        { name: 'Budget Chromebook', desc: 'Affordable and lightweight.', price: '$399.50', img: 'https://via.placeholder.com/100?text=Laptop3' }
+                    ];
+                } else if (userQuery.toLowerCase().includes('shoe') || userQuery.toLowerCase().includes('footwear')) {
+                     botResponseText = 'Great choice! Here are some popular footwear options:';
+                     productsToRecommend = [
+                        { name: 'Running Shoes X-Glide', desc: 'Lightweight for daily runs.', price: '$89.99', img: 'https://via.placeholder.com/100?text=Shoe1' },
+                        { name: 'Casual Sneakers Classic', desc: 'Comfortable everyday wear.', price: '$65.00', img: 'https://via.placeholder.com/100?text=Shoe2' }
+                     ];
+                } else if (userQuery.toLowerCase().includes('hello') || userQuery.toLowerCase().includes('hi')) {
+                    botResponseText = 'Hello there! How can I assist you with product information or recommendations?';
+                } else {
+                    botResponseText = `I'm sorry, I don't have specific recommendations for "${userQuery}" at the moment. Could you be more specific?`;
+                }
+
+                // Update the thinking bubble with the main text response
+                botThinkingDiv.textContent = botResponseText;
+
+                // If there are products to recommend, display them below the text response
+                if (productsToRecommend.length > 0) {
+                    displayRecommendations(productsToRecommend, botThinkingDiv);
+                }
+
+            } catch (error) {
+                console.error('Error fetching chatbot response:', error);
+                botThinkingDiv.textContent = 'Error: Could not get a response.';
+                botThinkingDiv.style.backgroundColor = '#fee2e2'; /* Red-100 for error */
+                botThinkingDiv.style.color = '#dc2626'; /* Red-600 */
+            } finally {
+                messagesArea.scrollTop = messagesArea.scrollHeight; // Scroll to bottom again
+            }
+        }
+
+        function displayRecommendations(products, parentMessageDiv) {
+            const productContainer = document.createElement('div');
+            productContainer.classList.add('flex', 'flex-col', 'gap-3', 'mt-3'); // Tailwind classes for spacing
+
+            products.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.classList.add('product-card'); // Custom class for styling
+
+                productCard.innerHTML = `
+                    <div class="product-card-image">
+                        <img src="${product.img}" alt="${product.name}">
+                    </div>
+                    <div class="product-card-details">
+                        <h4>${product.name}</h4>
+                        <p>${product.desc}</p>
+                        <span class="product-card-price">${product.price}</span>
+                        <a href="#" class="product-card-button mt-2">
+                            <span data-lucide="shopping-cart" class="lucide-icon-sm"></span> View Product
+                        </a>
+                    </div>
+                `;
+                productContainer.appendChild(productCard);
+            });
+            parentMessageDiv.appendChild(productContainer);
+            lucide.createIcons(); // Re-initialize icons for newly added elements
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

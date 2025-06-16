@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Recommender Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f7fa; /* Lighter background */
+            line-height: 1.6;
+            color: #334155; /* Slate-700 for default text */
+        }
+        .header-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Indigo to Violet gradient */
+        }
+        .section-bg {
+            background-color: #ffffff;
+            border-radius: 1rem; /* More rounded */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08); /* Softer, deeper shadow */
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+        }
+        /* Converted from @apply .card-item */
+        .card-item {
+            background-color: #ffffff;
+            padding: 1.5rem; /* p-6 */
+            border-radius: 1rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transform: scale(1); /* transform */
+            transition: all 0.3s ease-in-out; /* transition duration-300 ease-in-out */
+            border: 1px solid #e2e8f0; /* border border-gray-200 */
+        }
+        .card-item:hover {
+            transform: scale(1.05); /* hover:scale-105 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* hover:shadow-lg */
+        }
+
+        /* Converted from @apply .icon-wrapper */
+        .icon-wrapper {
+            padding: 1rem; /* p-4 */
+            border-radius: 9999px; /* rounded-full */
+            margin-bottom: 1rem; /* mb-4 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Enhanced Button Styling - Converted from @apply .btn-action */
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            padding-left: 2rem; /* px-8 */
+            padding-right: 2rem; /* px-8 */
+            padding-top: 0.75rem; /* py-3 */
+            padding-bottom: 0.75rem; /* py-3 */
+            border-width: 0px; /* border border-transparent */
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            color: #ffffff; /* text-white */
+            background-image: linear-gradient(to bottom right, #9333ea 0%, #4f46e5 100%); /* bg-gradient-to-br from-purple-600 to-indigo-700 */
+            transition-property: all; /* transition */
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* ease-in-out */
+            transition-duration: 300ms; /* duration-300 */
+            transform: translateY(0px); /* transform */
+        }
+        .btn-action:hover {
+            background-image: linear-gradient(to bottom right, #7e22ce 0%, #4338ca 100%); /* hover:from-purple-700 hover:to-indigo-800 */
+            transform: translateY(-4px); /* hover:-translate-y-1 (converted to pixels for consistency) */
+        }
+        .btn-action:focus {
+            outline: none; /* focus:outline-none */
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #a78bfa; /* focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 */
+        }
+
+        /* Stunning Input Fields - Converted from @apply .input-field */
+        .input-field {
+            margin-top: 0.25rem; /* mt-1 */
+            display: block;
+            width: 100%;
+            padding: 0.625rem 1rem; /* px-4 py-2.5 */
+            border-width: 1px;
+            border-color: #d1d5db; /* border border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+            font-size: 1rem; /* sm:text-base (assuming default text is base, so 1rem) */
+            transition-property: border-color, box-shadow; /* transition duration-200 */
+            transition-duration: 200ms;
+        }
+        .input-field:focus {
+            outline: none; /* focus:outline-none */
+            border-color: #6366f1; /* focus:border-indigo-500 */
+            box-shadow: 0 0 0 1px #6366f1, 0 0 0 3px rgba(99, 102, 241, 0.5); /* focus:ring-indigo-500 */
+        }
+        .input-field:hover {
+            border-color: #818cf8; /* hover:border-indigo-400 */
+        }
+
+        .lucide-icon-lg {
+            width: 3rem;
+            height: 3rem;
+            stroke-width: 2;
+        }
+        .lucide-icon-md {
+            width: 1.5rem;
+            height: 1.5rem;
+            stroke-width: 2;
+        }
+        /* New chart container style */
+        .chart-display {
+            position: relative; /* Needed for chart responsiveness */
+            height: 350px; /* Ensure chart area has consistent height */
+            width: 100%;
+            display: flex; /* For centering loading/error messages within chart area */
+            justify-content: center;
+            align-items: center;
+        }
+        /* Added for fade-in effect on sections that become visible */
+        .fade-in {
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .fade-in.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="text-gray-900">
+    <!-- Header Section -->
+    <header class="header-bg text-white shadow-lg p-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-extrabold flex items-center gap-3">
+                <span data-lucide="award" class="lucide-icon-md"></span>
+                Product Intelligence Dashboard
+            </h1>
+            <nav>
+                <a href="/visualization" class="text-white hover:text-blue-200 px-4 py-2 rounded-lg transition duration-200">Visualizations</a>
+                <a href="/chatbot-interface" class="text-white hover:text-blue-200 px-4 py-2 rounded-lg transition duration-200">Chatbot</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="py-20 px-4 sm:px-6 lg:px-8 text-center bg-white shadow-md mb-12">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-5xl font-extrabold text-gray-900 leading-tight mb-6">
+                Your Hub for Product Insights
+            </h2>
+            <p class="text-xl text-gray-700 mb-8">
+                Gain deeper understanding of your products and empower users with smart recommendations and conversational AI.
+            </p>
+            <div class="flex justify-center">
+                 <img src="https://placehold.co/800x400/E0E7FF/5C6BC0?text=Product+Insights+Dashboard" alt="Dashboard Overview" class="rounded-xl shadow-lg w-full max-w-xl">
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Dashboard Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        <!-- Manual Product Recommendation Section -->
+        <div class="section-bg">
+            <h3 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+                <span data-lucide="sparkles" class="inline-block mr-3 lucide-icon-md text-yellow-500"></span>
+                Get Instant Product Recommendations
+            </h3>
+            <p class="text-lg text-gray-600 mb-6 text-center max-w-2xl mx-auto">
+                Input product attributes and receive a tailored recommendation from our AI model.
+            </p>
+
+            <form id="recommendationForm" class="max-w-xl mx-auto p-6 bg-gray-50 rounded-xl shadow-inner grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="department" class="block text-sm font-medium text-gray-700">Department</label>
+                    <input type="text" id="department" name="department" class="input-field" placeholder="e.g., Clothing, Electronics">
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                    <input type="text" id="category" name="category" class="input-field" placeholder="e.g., T-shirts, Laptops">
+                </div>
+                <div>
+                    <label for="brand" class="block text-sm font-medium text-gray-700">Brand</label>
+                    <input type="text" id="brand" name="brand" class="input-field" placeholder="e.g., Nike, Samsung">
+                </div>
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700">Price Range</label>
+                    <input type="text" id="price" name="price" class="input-field" placeholder="e.g., $50-$100, above $500">
+                </div>
+                <div class="md:col-span-2 text-center mt-4">
+                    <button type="submit" class="btn-action">
+                        <span data-lucide="zap" class="lucide-icon-md mr-2"></span>
+                        Get Recommendation
+                    </button>
+                </div>
+            </form>
+
+            <div id="recommendationResult" class="mt-8 p-6 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg hidden fade-in">
+                <h4 class="font-semibold text-lg mb-2 flex items-center gap-2">
+                    <span data-lucide="check-circle" class="lucide-icon-md text-blue-600"></span>
+                    AI Recommendation:
+                </h4>
+                <ul id="recommendationList" class="list-disc list-inside text-gray-700 space-y-1">
+                    <!-- Recommendations will be injected here -->
+                </ul>
+                <div id="loadingIndicator" class="hidden text-center mt-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p class="mt-2 text-indigo-600">Generating recommendation...</p>
+                </div>
+                <div id="errorDisplay" class="hidden text-center mt-4 text-red-600">
+                    <p>Error getting recommendation. Please try again.</p>
+                </div>
+            </div>
+
+            <!-- Chart based on Recommendation -->
+            <div id="recommendationChartContainer" class="mt-8 section-bg hidden fade-in">
+                <h3 id="recommendationChartTitle" class="text-2xl font-bold text-gray-800 mb-6 text-center"></h3>
+                <div class="chart-display">
+                    <canvas id="productInsightChart" class="max-w-full h-full"></canvas>
+                    <div id="chartLoadingIndicator" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg hidden">
+                        <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-green-600 mx-auto"></div>
+                        <p class="mt-2 ml-4 text-green-700 text-lg">Loading chart data...</p>
+                    </div>
+                    <div id="chartErrorDisplay" class="absolute inset-0 flex items-center justify-center bg-red-50 bg-opacity-90 rounded-lg hidden">
+                        <p class="text-red-600 text-lg font-medium text-center"></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Quick Access Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Chatbot Card -->
+            <div class="card-item bg-gradient-to-br from-green-50 to-emerald-100 border-emerald-300">
+                <div class="icon-wrapper bg-emerald-200">
+                    <span data-lucide="message-square-text" class="lucide-icon-lg text-emerald-700"></span>
+                </div>
+                <h4 class="text-2xl font-bold text-gray-800 mb-3">Talk to the Chatbot</h4>
+                <p class="text-gray-600 mb-6">
+                    Have a conversation with our AI about products, trends, or anything else.
+                </p>
+                <a href="/chatbot-interface" class="btn-action bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800">
+                    <span data-lucide="message-circle" class="lucide-icon-md mr-2"></span>
+                    Launch Chatbot
+                </a>
+            </div>
+
+            <!-- Visualizations Card -->
+            <div class="card-item bg-gradient-to-br from-purple-50 to-indigo-100 border-indigo-300">
+                <div class="icon-wrapper bg-indigo-200">
+                    <span data-lucide="bar-chart-2" class="lucide-icon-lg text-indigo-700"></span>
+                </div>
+                <h4 class="text-2xl font-bold text-gray-800 mb-3">Explore Data Visualizations</h4>
+                <p class="text-gray-600 mb-6">
+                    See key product trends and sales insights at a glance.
+                </p>
+                <a href="/visualization" class="btn-action bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800">
+                    <span data-lucide="pie-chart" class="lucide-icon-md mr-2"></span>
+                    View Charts
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-white py-10 px-4 sm:px-6 lg:px-8 text-center rounded-t-xl mt-12 shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <p class="mb-4 text-gray-400">&copy; 2024 Product Intelligence. All rights reserved.</p>
+            <div class="flex justify-center space-x-6">
+                <a href="#" class="text-gray-400 hover:text-white transition duration-200">Privacy Policy</a>
+                <a href="#" class="text-gray-400 hover:text-white transition duration-200">Terms of Service</a>
+                <a href="#" class="text-gray-400 hover:text-white transition duration-200">Contact Us</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+
+        let productInsightChart = null; // To store Chart.js instance
+
+        async function updateRecommendationChart(filters) {
+            const chartContainer = document.getElementById('recommendationChartContainer');
+            const chartLoading = document.getElementById('chartLoadingIndicator');
+            const chartError = document.getElementById('chartErrorDisplay');
+            const chartTitleElement = document.getElementById('recommendationChartTitle');
+            const chartCanvas = document.getElementById('productInsightChart');
+
+            // Show chart loading, hide chart and error
+            chartContainer.classList.add('hidden');
+            chartContainer.classList.remove('opacity-100'); // Hide fully for fade-in
+            chartContainer.classList.add('opacity-0');
+            chartLoading.classList.remove('hidden');
+            chartError.classList.add('hidden');
+            chartTitleElement.textContent = ''; // Clear title
+
+            // Destroy existing chart if it exists
+            if (productInsightChart) {
+                productInsightChart.destroy();
+                productInsightChart = null;
+            }
+
+            try {
+                const response = await fetch('/product_insight_chart_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(filters)
+                });
+
+                if (!response.ok) {
+                    const errorJson = await response.json();
+                    throw new Error(errorJson.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                const chartData = await response.json();
+
+                if (chartData.labels.length === 0) {
+                     chartTitleElement.textContent = chartData.title; // Display "No data" message
+                     chartError.querySelector('p').textContent = chartData.title; // Also show in error area
+                     chartError.classList.remove('hidden'); // Show error area, not chart
+                     chartContainer.classList.remove('hidden', 'opacity-0'); // Show container for error message
+                     chartContainer.classList.add('opacity-100');
+                     return; // No data to plot
+                }
+
+                chartTitleElement.textContent = chartData.title || 'Product Insights';
+                chartContainer.classList.remove('hidden', 'opacity-0');
+                chartContainer.classList.add('opacity-100'); // Fade in the chart container
+
+                // Create new chart
+                productInsightChart = new Chart(chartCanvas, {
+                    type: chartData.chart_type,
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: 'Product Count',
+                            data: chartData.values,
+                            backgroundColor: 'rgba(79, 70, 229, 0.7)', /* Indigo-600 with more opacity */
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 1,
+                            borderRadius: 8 /* Slightly more rounded bars */
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: chartData.chart_type === 'bar' ? 'y' : 'x', /* Horizontal bars for readability */
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { display: false }, /* Cleaner grid lines */
+                                ticks: { font: { size: 12 } },
+                                title: {
+                                    display: true,
+                                    text: 'Count',
+                                    font: { size: 14, weight: 'bold' }
+                                }
+                            },
+                            y: {
+                                grid: { display: false }, /* Cleaner grid lines */
+                                ticks: { font: { size: 12 } },
+                                title: {
+                                    display: true,
+                                    text: 'Product Name',
+                                    font: { size: 14, weight: 'bold' }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 12 }
+                            },
+                            title: {
+                                display: false,
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error fetching or rendering recommendation chart data:', error);
+                chartError.querySelector('p').textContent = `Error loading chart: ${error.message}.`;
+                chartError.classList.remove('hidden');
+                chartContainer.classList.remove('hidden', 'opacity-0'); // Show container for error message
+                chartContainer.classList.add('opacity-100');
+            } finally {
+                chartLoading.classList.add('hidden');
+            }
+        }
+
+
+        // JavaScript for handling the recommendation form submission
+        document.getElementById('recommendationForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            const recommendationResult = document.getElementById('recommendationResult');
+            const recommendationList = document.getElementById('recommendationList');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorDisplay = document.getElementById('errorDisplay');
+            const recommendationChartContainer = document.getElementById('recommendationChartContainer');
+
+
+            // Reset previous states of recommendation text and chart
+            recommendationResult.classList.add('hidden', 'opacity-0');
+            recommendationList.innerHTML = ''; // Clear previous recommendations
+            errorDisplay.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+            recommendationChartContainer.classList.add('hidden', 'opacity-0');
+
+
+            try {
+                const response = await fetch('/manual', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const errorJson = await response.json();
+                    throw new Error(errorJson.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log("Recommendation Result:", result);
+
+                if (result.recommendations && result.recommendations.length > 0) {
+                    let firstRecommendedCategory = null;
+                    let firstRecommendedBrand = null;
+                    let firstRecommendedDepartment = null;
+
+                    result.recommendations.forEach(rec => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `${rec.product_name} (${rec.product_category}, ${rec.product_department}) - Price: ${rec.sale_price}, Stock: ${rec.stock_quantity}`;
+                        recommendationList.appendChild(listItem);
+
+                        // Capture first recommended item's attributes for chart
+                        if (!firstRecommendedCategory) firstRecommendedCategory = rec.product_category;
+                        if (!firstRecommendedBrand) firstRecommendedBrand = rec.product_brand;
+                        if (!firstRecommendedDepartment) firstRecommendedDepartment = rec.product_department;
+                    });
+
+                    // Show recommendation results with fade-in
+                    recommendationResult.classList.remove('hidden', 'opacity-0');
+                    recommendationResult.classList.add('opacity-100');
+
+
+                    // Trigger chart update based on the first recommendation's attributes
+                    updateRecommendationChart({
+                        category: firstRecommendedCategory,
+                        brand: firstRecommendedBrand,
+                        department: firstRecommendedDepartment
+                    });
+
+                } else {
+                    recommendationList.textContent = "No specific recommendations found based on your input. Try different criteria.";
+                    recommendationResult.classList.remove('hidden', 'opacity-0');
+                    recommendationResult.classList.add('opacity-100');
+                    // Hide chart if no recommendations
+                    recommendationChartContainer.classList.add('hidden');
+                }
+
+            } catch (error) {
+                console.error('Error fetching recommendation:', error);
+                errorDisplay.classList.remove('hidden');
+                errorDisplay.textContent = `Error getting recommendation: ${error.message}.`;
+                 // Hide chart on error
+                recommendationChartContainer.classList.add('hidden');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

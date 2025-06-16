@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Insights Visualizations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f7fa; /* Consistent lighter background */
+            line-height: 1.6;
+            color: #334155; /* Consistent Slate-700 for default text */
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Consistent Header Background */
+        .header-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Indigo to Violet gradient */
+        }
+        /* Consistent Section Background for Chart Containers */
+        .section-bg {
+            background-color: #ffffff;
+            border-radius: 1rem; /* More rounded */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08); /* Softer, deeper shadow */
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            position: relative; /* For loading/error overlays */
+            min-height: 480px; /* Increased height for more space for labels */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Align content to top */
+            align-items: center; /* Center content horizontally */
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for hover effects */
+        }
+
+        .section-bg:hover {
+            transform: translateY(-5px); /* Lift card on hover */
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12); /* Enhanced shadow on hover */
+        }
+
+        .lucide-icon-md {
+            width: 1.5rem;
+            height: 1.5rem;
+            stroke-width: 2;
+        }
+        /* Reusing consistent styles from index.html for icons */
+        .lucide-icon-sm {
+            width: 1.25rem;
+            height: 1.25rem;
+            stroke-width: 2;
+        }
+        .lucide-icon-lg {
+            width: 3rem;
+            height: 3rem;
+            stroke-width: 2;
+        }
+        /* Converted from @apply .btn-action (from index.html for consistency) */
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            padding-left: 2rem; /* px-8 */
+            padding-right: 2rem; /* px-8 */
+            padding-top: 0.75rem; /* py-3 */
+            padding-bottom: 0.75rem; /* py-3 */
+            border-width: 0px; /* border border-transparent */
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            color: #ffffff; /* text-white */
+            background-image: linear-gradient(to bottom right, #4f46e5 0%, #8b5cf6 100%); /* Adjusted gradient for visualization button */
+            transition-property: all; /* transition */
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* ease-in-out */
+            transition-duration: 300ms; /* duration-300 */
+            transform: translateY(0px); /* transform */
+        }
+        .btn-action:hover {
+            background-image: linear-gradient(to bottom right, #4338ca 0%, #7c3aed 100%); /* hover:from-indigo-700 hover:to-purple-800 */
+            transform: translateY(-4px); /* hover:-translate-y-1 (converted to pixels for consistency) */
+        }
+        .btn-action:focus {
+            outline: none; /* focus:outline-none */
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6366f1; /* focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 */
+        }
+        /* Stunning Input Fields - Converted from @apply .input-field (from index.html for consistency) */
+        .input-field {
+            margin-top: 0.25rem; /* mt-1 */
+            display: block;
+            width: 100%;
+            padding: 0.625rem 1rem; /* px-4 py-2.5 */
+            border-width: 1px;
+            border-color: #d1d5db; /* border border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+            font-size: 1rem; /* sm:text-base (assuming default text is base, so 1rem) */
+            transition-property: border-color, box-shadow; /* transition duration-200 */
+            transition-duration: 200ms;
+        }
+        .input-field:focus {
+            outline: none; /* focus:outline-none */
+            border-color: #6366f1; /* focus:border-indigo-500 */
+            box-shadow: 0 0 0 1px #6366f1, 0 0 0 3px rgba(99, 102, 241, 0.5); /* focus:ring-indigo-500 */
+        }
+        .input-field:hover {
+            border-color: #818cf8; /* hover:border-indigo-400 */
+        }
+
+        .chart-canvas {
+            max-width: 100%;
+            height: 380px; /* Increased height for consistent chart display */
+            margin-top: 1.5rem; /* Add some space below title */
+        }
+
+        /* Overlay for loading and error states */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.95); /* Slightly less transparent */
+            border-radius: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #4b5563; /* Gray-600 */
+            transition: opacity 0.3s ease-in-out;
+            z-index: 10; /* Ensure overlay is on top of canvas */
+        }
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none; /* Allows interaction with elements beneath when hidden */
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #6366f1; /* Indigo-500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-bottom: 0.5rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message-text { /* Renamed to avoid conflict with class in JS */
+            color: #ef4444; /* Red-500 */
+            margin-top: 1rem;
+            max-width: 80%; /* Prevent text from overflowing */
+        }
+
+        /* Custom styles for Chart.js tooltips to match dashboard theme */
+        .chartjs-tooltip {
+            background: rgba(30, 41, 59, 0.9) !important; /* Slate-900 with transparency */
+            border-radius: 0.5rem !important;
+            padding: 10px 15px !important;
+            font-family: 'Inter', sans-serif !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .chartjs-tooltip-header {
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chartjs-tooltip-title {
+            color: #cbd5e1 !important; /* Slate-300 */
+            font-size: 14px !important;
+            font-weight: 600 !important;
+        }
+        .chartjs-tooltip-body {
+            color: #e2e8f0 !important; /* Slate-200 */
+            font-size: 12px !important;
+        }
+        .chartjs-tooltip-body span {
+            display: block;
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+    <header class="header-bg text-white shadow-lg p-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-extrabold flex items-center gap-3">
+                <span data-lucide="bar-chart-2" class="lucide-icon-md"></span>
+                Product Insights Visualizations
+            </h1>
+            <nav>
+                <a href="/" class="text-white hover:text-blue-200 px-4 py-2 rounded-lg transition duration-200">Dashboard</a>
+                <a href="/chatbot-interface" class="text-white hover:text-blue-200 px-4 py-2 rounded-lg transition duration-200">Chatbot</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">📊 Comprehensive Product Data Dashboard</h1>
+        <p class="text-xl text-gray-700 mb-10 text-center max-w-2xl mx-auto">
+            Dive deep into your e-commerce data with interactive charts showcasing product categories, department distribution, brand performance, and more. Use the filters below to refine your insights.
+        </p>
+
+        <div class="section-bg mb-8 p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">
+                <span data-lucide="filter" class="inline-block mr-3 lucide-icon-md text-blue-500"></span>
+                Filter Your Data Insights
+            </h2>
+            <form id="filterForm" class="max-w-3xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="filter_department" class="block text-sm font-medium text-gray-700">Department</label>
+                    <input type="text" id="filter_department" name="department" class="input-field" placeholder="e.g., Clothing, Electronics">
+                </div>
+                <div>
+                    <label for="filter_category" class="block text-sm font-medium text-gray-700">Category</label>
+                    <input type="text" id="filter_category" name="category" class="input-field" placeholder="e.g., T-shirts, Laptops">
+                </div>
+                <div>
+                    <label for="filter_brand" class="block text-sm font-medium text-gray-700">Brand</label>
+                    <input type="text" id="filter_brand" name="brand" class="input-field" placeholder="e.g., Nike, Samsung">
+                </div>
+                <div>
+                    <label for="filter_min_price" class="block text-sm font-medium text-gray-700">Min Price</label>
+                    <input type="number" id="filter_min_price" name="min_price" class="input-field" placeholder="e.g., 50.00">
+                </div>
+                <div>
+                    <label for="filter_max_price" class="block text-sm font-medium text-gray-700">Max Price</label>
+                    <input type="number" id="filter_max_price" name="max_price" class="input-field" placeholder="e.g., 500.00">
+                </div>
+                <div class="md:col-span-3 text-center mt-4">
+                    <button type="submit" class="btn-action">
+                        <span data-lucide="search" class="lucide-icon-md mr-2"></span>
+                        Apply Filters
+                    </button>
+                    <button type="button" id="clearFiltersBtn" class="inline-flex items-center ml-4 px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition ease-in-out duration-150">
+                        <span data-lucide="x-circle" class="lucide-icon-md mr-2"></span>
+                        Clear Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="loadingPageOverlay" class="fixed inset-0 bg-gray-200 bg-opacity-75 flex justify-center items-center z-50 hidden">
+            <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+                <div class="loading-spinner mx-auto"></div>
+                <p class="text-lg font-semibold text-gray-700 mt-4">Loading data and building charts...</p>
+            </div>
+        </div>
+
+        <div id="chartsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="section-bg col-span-1">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center flex items-center justify-center">
+                    <span data-lucide="layout-list" class="lucide-icon-md mr-3 text-indigo-500"></span>
+                    Top Product Categories
+                </h2>
+                <p class="text-gray-600 text-sm text-center mb-6">Most popular categories by product count, revealing key product segments.</p>
+                <div class="chart-wrapper w-full relative">
+                    <canvas id="categoryChart" class="chart-canvas"></canvas>
+                    <div id="categoryChartOverlay" class="overlay hidden">
+                        <div class="loading-spinner"></div>
+                        <p class="error-message-text hidden"></p>
+                        <span class="loading-text">Loading chart...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-bg col-span-1">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center flex items-center justify-center">
+                    <span data-lucide="building" class="lucide-icon-md mr-3 text-purple-500"></span>
+                    Product Department Distribution
+                </h2>
+                <p class="text-gray-600 text-sm text-center mb-6">Breakdown of products across different departments, showing major areas of inventory.</p>
+                <div class="chart-wrapper w-full relative">
+                    <canvas id="departmentChart" class="chart-canvas"></canvas>
+                    <div id="departmentChartOverlay" class="overlay hidden">
+                        <div class="loading-spinner"></div>
+                        <p class="error-message-text hidden"></p>
+                        <span class="loading-text">Loading chart...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-bg col-span-1">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center flex items-center justify-center">
+                    <span data-lucide="award" class="lucide-icon-md mr-3 text-emerald-500"></span>
+                    Top Product Brands
+                </h2>
+                <p class="text-gray-600 text-sm text-center mb-6">Leading brands by the volume of their products, indicating market presence.</p>
+                <div class="chart-wrapper w-full relative">
+                    <canvas id="brandChart" class="chart-canvas"></canvas>
+                    <div id="brandChartOverlay" class="overlay hidden">
+                        <div class="loading-spinner"></div>
+                        <p class="error-message-text hidden"></p>
+                        <span class="loading-text">Loading chart...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-bg col-span-1">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center flex items-center justify-center">
+                    <span data-lucide="tag" class="lucide-icon-md mr-3 text-red-500"></span>
+                    Product Price Distribution
+                </h2>
+                <p class="text-gray-600 text-sm text-center mb-6">Distribution of products across various price ranges, highlighting pricing strategies.</p>
+                <div class="chart-wrapper w-full relative">
+                    <canvas id="priceDistributionChart" class="chart-canvas"></canvas>
+                    <div id="priceDistributionChartOverlay" class="overlay hidden">
+                        <div class="loading-spinner"></div>
+                        <p class="error-message-text hidden"></p>
+                        <span class="loading-text">Loading chart...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-bg col-span-1">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center flex items-center justify-center">
+                    <span data-lucide="trending-up" class="lucide-icon-md mr-3 text-sky-500"></span>
+                    Top Products by Sale Price
+                </h2>
+                <p class="text-gray-600 text-sm text-center mb-6">Highest priced products in the current filtered view, showcasing premium offerings.</p>
+                <div class="chart-wrapper w-full relative">
+                    <canvas id="topProductsByPriceChart" class="chart-canvas"></canvas>
+                    <div id="topProductsByPriceChartOverlay" class="overlay hidden">
+                        <div class="loading-spinner"></div>
+                        <p class="error-message-text hidden"></p>
+                        <span class="loading-text">Loading chart...</span>
+                    </div>
+                </div>
+            </div>
+
+              <div class="section-bg col-span-1">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center flex items-center justify-center">
+                    <span data-lucide="package" class="lucide-icon-md mr-3 text-amber-500"></span>
+                    Product Stock Quantity
+                </h2>
+                <p class="text-gray-600 text-sm text-center mb-6">Insights into inventory levels across products, aiding stock management.</p>
+                <div class="chart-wrapper w-full relative">
+                    <canvas id="stockQuantityChart" class="chart-canvas"></canvas>
+                    <div id="stockQuantityChartOverlay" class="overlay hidden">
+                        <div class="loading-spinner"></div>
+                        <p class="error-message-text hidden"></p>
+                        <span class="loading-text">Loading chart...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white py-10 px-4 sm:px-6 lg:px-8 text-center rounded-t-xl mt-12 shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <p class="mb-4 text-gray-400">&copy; 2024 Product Intelligence. All rights reserved.</p>
+            <div class="flex justify-center space-x-6">
+                <a href="#" class="text-gray-400 hover:text-white transition duration-200">Privacy Policy</a>
+                <a href="#" class="text-gray-400 hover:text-white transition duration-200">Terms of Service</a>
+                <a href="#" class="text-gray-400 hover:text-white transition duration-200">Contact Us</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // Register the datalabels plugin globally
+        Chart.register(ChartDataLabels);
+
+        // Store chart instances to destroy them before re-creating
+        const chartInstances = {
+            categoryChart: null,
+            departmentChart: null,
+            brandChart: null,
+            priceDistributionChart: null,
+            topProductsByPriceChart: null,
+            stockQuantityChart: null
+        };
+
+        const chartColors = {
+            primary: '#4f46e5', /* Indigo-600 */
+            secondary: '#8b5cf6', /* Violet-500 */
+            tertiary: '#10b981', /* Emerald-500 */
+            // More vibrant and distinct colors for pie/doughnut charts and varied bar charts
+            accents: [
+                '#6366f1', '#a855f7', '#10b981', '#ef4444', '#f59e0b',
+                '#06b6d4', '#ec4899', '#3b82f6', '#84cc16', '#f97316',
+                '#d946af', '#7e22ce', '#db2777', '#ca8a04', '#0d9488'
+            ]
+        };
+
+        // Helper function to create/update charts
+        function createOrUpdateChart(chartId, chartType, labels, dataValues, labelText, customOptions = {}) {
+            const ctx = document.getElementById(chartId).getContext('2d');
+
+            if (chartInstances[chartId]) {
+                chartInstances[chartId].destroy();
+            }
+
+            const defaultOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true, // Ensure tooltips are enabled for hover
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)', // Custom tooltip background
+                        titleColor: '#cbd5e1',
+                        bodyColor: '#e2e8f0',
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        borderRadius: 6,
+                        // Add custom callbacks for more informative tooltips
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.x !== undefined) { // For horizontal bars
+                                    label += context.parsed.x.toLocaleString();
+                                } else if (context.parsed.y !== undefined) { // For vertical bars
+                                    label += context.parsed.y.toLocaleString();
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: { // Data labels plugin for showing values on bars/segments
+                        display: function(context) {
+                            // Only display data labels if value is greater than 0
+                            return context.dataset.data[context.dataIndex] > 0;
+                        },
+                        color: '#fff', // White color for better contrast on colored bars
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        formatter: function(value, context) {
+                            // Format numbers with commas
+                            return value.toLocaleString();
+                        },
+                        // Adjust position based on chart type for better visibility
+                        anchor: chartType === 'bar' ? 'end' : 'center',
+                        align: chartType === 'bar' ? 'end' : 'center',
+                        offset: chartType === 'bar' ? 4 : 0, // Offset for bar charts
+                        textShadowBlur: 2, // Add a subtle shadow for readability
+                        textShadowColor: 'rgba(0,0,0,0.5)'
+                    },
+                    title: { display: false } // Managed by H2 above
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { display: false },
+                        ticks: { color: '#6b7280', font: { size: 12 }, autoSkip: true, maxRotation: 45, minRotation: 0 }, // Prevent overlapping
+                        title: {
+                            display: true,
+                            text: 'Count',
+                            color: '#334155',
+                            font: { size: 14, weight: 'bold' }
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#6b7280', font: { size: 12 }, autoSkip: true, maxRotation: 0, minRotation: 0, padding: 10 }, // Prevent overlapping, added padding
+                        title: {
+                            display: true,
+                            text: labelText,
+                            color: '#334155',
+                            font: { size: 14, weight: 'bold' }
+                        }
+                    }
+                }
+            };
+
+            const options = Chart.helpers.merge(defaultOptions, customOptions); // Merge custom options
+
+            // Determine background colors for datasets
+            let backgroundColors;
+            if (chartType === 'pie' || chartType === 'doughnut') {
+                backgroundColors = chartColors.accents; // Use multiple accent colors for pie/doughnut
+            } else if (chartId === 'categoryChart' || chartId === 'brandChart') {
+                // For category and brand charts, use a mix of colors to differentiate bars
+                backgroundColors = dataValues.map((val, index) => chartColors.accents[index % chartColors.accents.length]);
+            } else if (chartId === 'priceDistributionChart') {
+                backgroundColors = dataValues.map((val, index) => chartColors.accents[(index + 2) % chartColors.accents.length]); // Offset colors
+            }
+            else {
+                backgroundColors = chartColors.primary; // Default to primary for other bar charts
+            }
+
+            // Determine border colors (can be same as background for solid look)
+            const borderColors = backgroundColors;
+
+            chartInstances[chartId] = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelText,
+                        data: dataValues,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        borderRadius: chartType === 'bar' ? 8 : 0,
+                        barThickness: chartType === 'bar' ? 20 : undefined,
+                        hoverOffset: chartType === 'pie' || chartType === 'doughnut' ? 4 : undefined
+                    }]
+                },
+                options: options,
+                plugins: [ChartDataLabels] // Ensure the datalabels plugin is explicitly loaded for this chart
+            });
+        }
+
+        async function fetchAndRenderCharts(filters = {}) {
+            const loadingPageOverlay = document.getElementById('loadingPageOverlay');
+            const chartsContainer = document.getElementById('chartsContainer');
+            const overlays = {
+                categoryChart: document.getElementById('categoryChartOverlay'),
+                departmentChart: document.getElementById('departmentChartOverlay'),
+                brandChart: document.getElementById('brandChartOverlay'),
+                priceDistributionChart: document.getElementById('priceDistributionChartOverlay'),
+                topProductsByPriceChart: document.getElementById('topProductsByPriceChartOverlay'),
+                stockQuantityChart: document.getElementById('stockQuantityChartOverlay')
+            };
+
+            // Show full page loading overlay
+            loadingPageOverlay.classList.remove('hidden');
+
+            // Show individual chart loading overlays and reset their content
+            Object.values(overlays).forEach(overlay => {
+                overlay.classList.remove('hidden');
+                overlay.querySelector('.loading-spinner').classList.remove('hidden');
+                overlay.querySelector('.loading-text').classList.remove('hidden'); // Show loading text
+                overlay.querySelector('.loading-text').textContent = 'Loading chart...';
+                const errorMessageElement = overlay.querySelector('.error-message-text');
+                if (errorMessageElement) {
+                    errorMessageElement.textContent = ''; // Clear error message
+                    errorMessageElement.classList.add('hidden'); // Hide error message
+                }
+            });
+
+            try {
+                const response = await fetch("/dashboard_data_filtered", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+
+                if (!response.ok) {
+                    // Check if it's a 404 (No data found) or another server error
+                    const errorDetail = await response.json();
+                    throw new Error(errorDetail.detail || `HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+
+                // If the response is OK but contains an internal 'error' field (from a previous pattern)
+                if (data.error) {
+                    throw new Error(data.error); // Treat as an error
+                }
+
+
+                // Destroy existing charts if they exist
+                for (const chartId in chartInstances) {
+                    if (chartInstances[chartId]) {
+                        chartInstances[chartId].destroy();
+                        chartInstances[chartId] = null;
+                    }
+                }
+
+                // Render Category Chart
+                createOrUpdateChart('categoryChart', 'bar', data.category_labels, data.category_values, 'Number of Products', {
+                    indexAxis: 'y', // Horizontal bars for better label readability
+                    scales: {
+                        y: { 
+                            title: { text: 'Product Category' }, 
+                            ticks: { 
+                                mirror: false, 
+                                padding: 10, 
+                                autoSkip: true, // Enable auto-skipping for labels
+                                maxRotation: 0, 
+                                minRotation: 0,
+                                // Callback to truncate long labels if necessary
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    if (label.length > 25) { // Truncate labels longer than 25 characters
+                                        return label.substring(0, 22) + '...';
+                                    }
+                                    return label;
+                                }
+                            } 
+                        },
+                        x: { 
+                            title: { text: 'Number of Products' }, // More descriptive title
+                            ticks: { padding: 5 } 
+                        }
+                    },
+                    plugins: {
+                        datalabels: {
+                             // Anchor datalabels at the start for horizontal bars
+                            anchor: 'start',
+                            align: 'end',
+                            offset: 8,
+                            color: '#334155', // Darker color for datalabels for contrast on light bars
+                            textShadowBlur: 0 // No shadow needed for dark text
+                        }
+                    }
+                });
+                overlays.categoryChart.classList.add('hidden');
+
+                // Render Department Chart (Pie Chart)
+                createOrUpdateChart('departmentChart', 'pie', data.department_labels, data.department_values, 'Product Distribution', {
+                    plugins: { 
+                        legend: { 
+                            position: 'right', 
+                            labels: { color: '#334155' } 
+                        },
+                        datalabels: {
+                            color: '#fff', // White color for better contrast on colored pie slices
+                            formatter: (value, context) => {
+                                const total = context.dataset.data.reduce((sum, current) => sum + current, 0);
+                                const percentage = (value / total * 100).toFixed(1) + '%';
+                                return percentage;
+                            }
+                        }
+                    }
+                });
+                overlays.departmentChart.classList.add('hidden');
+
+                // Render Brand Chart
+                createOrUpdateChart('brandChart', 'bar', data.brand_labels, data.brand_values, 'Number of Products', {
+                    indexAxis: 'y', // Horizontal bars for better label readability
+                    scales: {
+                        y: { 
+                            title: { text: 'Product Brand' }, 
+                            ticks: { 
+                                mirror: false, 
+                                padding: 10, 
+                                autoSkip: true, // Enable auto-skipping for labels
+                                maxRotation: 0, 
+                                minRotation: 0,
+                                // Callback to truncate long labels if necessary
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    if (label.length > 25) { // Truncate labels longer than 25 characters
+                                        return label.substring(0, 22) + '...';
+                                    }
+                                    return label;
+                                }
+                            } 
+                        },
+                        x: { 
+                            title: { text: 'Number of Products' }, // More descriptive title
+                            ticks: { padding: 5 } 
+                        }
+                    },
+                     plugins: {
+                        datalabels: {
+                            // Anchor datalabels at the start for horizontal bars
+                            anchor: 'start',
+                            align: 'end',
+                            offset: 8,
+                            color: '#334155', // Darker color for datalabels for contrast on light bars
+                            textShadowBlur: 0 // No shadow needed for dark text
+                        }
+                    }
+                });
+                overlays.brandChart.classList.add('hidden');
+
+                // Render Price Distribution Chart (New)
+                createOrUpdateChart('priceDistributionChart', 'bar', data.price_range_labels, data.price_range_values, 'Number of Products', {
+                    scales: { 
+                        x: { 
+                            title: { text: 'Price Range (USD)' }, 
+                            ticks: { padding: 5, autoSkip: false, maxRotation: 45, minRotation: 45 } 
+                        }, 
+                        y: { 
+                            title: { text: 'Count' } 
+                        } 
+                    }
+                });
+                overlays.priceDistributionChart.classList.add('hidden');
+
+                // Render Top Products by Price Chart (New)
+                createOrUpdateChart('topProductsByPriceChart', 'bar', data.top_products_by_price_labels, data.top_products_by_price_values, 'Sale Price', {
+                    indexAxis: 'y', // Horizontal bars
+                    scales: {
+                        x: { 
+                            title: { text: 'Sale Price (USD)' }, 
+                            ticks: { padding: 5 } 
+                        },
+                        y: { 
+                            title: { text: 'Product Name' }, 
+                            ticks: { 
+                                mirror: false, 
+                                padding: 10, 
+                                autoSkip: true, // Enable auto-skipping for labels
+                                maxRotation: 0, 
+                                minRotation: 0,
+                                // Callback to truncate long labels if necessary
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    if (label.length > 25) { // Truncate labels longer than 25 characters
+                                        return label.substring(0, 22) + '...';
+                                    }
+                                    return label;
+                                }
+                            } 
+                        }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: {
+                            // Anchor datalabels at the start for horizontal bars
+                            anchor: 'start',
+                            align: 'end',
+                            offset: 8,
+                            color: '#334155', // Darker color for datalabels for contrast on light bars
+                            formatter: function(value, context) {
+                                return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            },
+                            textShadowBlur: 0 // No shadow needed for dark text
+                        }
+                    },
+                    datasets: [{ backgroundColor: chartColors.tertiary, borderColor: chartColors.tertiary }] // Use a different color
+                });
+                overlays.topProductsByPriceChart.classList.add('hidden');
+
+                // Render Stock Quantity Chart (New)
+                createOrUpdateChart('stockQuantityChart', 'bar', data.stock_labels, data.stock_values, 'Stock Quantity', {
+                    indexAxis: 'x', // Vertical bars
+                    scales: {
+                        x: { 
+                            title: { text: 'Product Name' }, 
+                            ticks: { padding: 5, autoSkip: false, maxRotation: 45, minRotation: 45 } 
+                        },
+                        y: { 
+                            title: { text: 'Stock Quantity' } 
+                        }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: {
+                            color: '#fff', // White color for better contrast on colored bars
+                            textShadowBlur: 2, // Add a subtle shadow for readability
+                            textShadowColor: 'rgba(0,0,0,0.5)'
+                        }
+                    },
+                    datasets: [{ backgroundColor: chartColors.accents[3], borderColor: chartColors.accents[3] }] // Use a different color
+                });
+                overlays.stockQuantityChart.classList.add('hidden');
+
+
+                chartsContainer.classList.remove('hidden'); // Show the main chart container
+
+            } catch (error) {
+                console.error("Failed to load chart data:", error);
+                const errorMessage = error.message || "An unexpected error occurred while loading data.";
+                Object.values(overlays).forEach(overlay => {
+                    overlay.querySelector('.loading-spinner').classList.add('hidden');
+                    overlay.querySelector('.loading-text').classList.add('hidden'); // Hide "Loading chart..." text
+                    let errorP = overlay.querySelector('.error-message-text');
+                    if (!errorP) {
+                        errorP = document.createElement('p');
+                        errorP.className = 'error-message-text';
+                        overlay.appendChild(errorP);
+                    }
+                    errorP.textContent = `Error: ${errorMessage}`; // Prepend "Error:"
+                    errorP.classList.remove('hidden');
+                    overlay.classList.remove('hidden');
+                });
+            } finally {
+                loadingPageOverlay.classList.add('hidden'); // Hide full page loading overlay
+            }
+        }
+
+        // Event listener for filter form submission
+        document.getElementById('filterForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const filters = {};
+            // Convert form data to a suitable object for the backend
+            formData.forEach((value, key) => {
+                // Convert price fields to numbers, handle empty strings as null
+                if (key === 'min_price' || key === 'max_price') {
+                    filters[key] = value ? parseFloat(value) : null;
+                } else {
+                    // For text fields, ensure empty strings are treated as None or removed if no input
+                    filters[key] = value.trim() !== '' ? value.trim() : null;
+                }
+            });
+            fetchAndRenderCharts(filters);
+        });
+
+        // Event listener for clear filters button
+        document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+            document.getElementById('filterForm').reset(); // Clear all form fields
+            fetchAndRenderCharts({}); // Load charts with no filters
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchAndRenderCharts); // Initial load of charts
+    </script>
+
+</body>
+</html>
